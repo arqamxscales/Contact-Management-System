@@ -1,3 +1,9 @@
+
+<img width="363" height="139" alt="download" src="https://github.com/user-attachments/assets/ab5df551-3569-4181-8145-b699464c5ee0" />
+
+
+
+
 # Contact Management System
 
 A full-stack web application for managing contacts efficiently.  
