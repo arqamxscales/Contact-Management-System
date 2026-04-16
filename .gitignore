@@ -1,32 +1,86 @@
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+*.swo
+*~
 
 # IDE
 .idea/
 .vscode/
 *.iml
+*.sublime-project
+*.sublime-workspace
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.keystore
+
+# Configuration (dev-specific)
+application-dev.properties
+application-local.properties
 
 # Logs
 *.log
 logs/
-
-# Env files
-.env
-.env.*
-!.env.example
-!**/.env.example
+*.log.*
 
 # Java / Maven
 backend/target/
+backend/out/
+backend/.gradle/
+backend/build/
 *.class
+*.jar
+*.war
+*.ear
+.classpath
+.project
+.settings/
 
-# Node
+# Node / Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/build/
+frontend/.nuxt/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Coverage
 coverage/
+.coverage
+htmlcov/
+
+# OS
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# IDEs
+nbproject/
+.netbeans/
+
+# Keep examples for setup guidance
+!.env.example
+!**/.env.example
+!**/application.properties.example

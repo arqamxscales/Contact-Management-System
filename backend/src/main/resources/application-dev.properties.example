@@ -1,0 +1,19 @@
+# Database config (replace via environment variables)
+spring.datasource.url=${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=contact_db;encrypt=true;trustServerCertificate=true}
+spring.datasource.username=${DB_USERNAME:sa}
+spring.datasource.password=${DB_PASSWORD:yourStrong(!)Password}
+spring.datasource.driver-class-name=com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+# JPA
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.database-platform=org.hibernate.dialect.SQLServerDialect
+
+# JWT
+jwt.secret=${JWT_SECRET:replace_with_long_secure_secret_key}
+jwt.expiration=${JWT_EXPIRATION_MS:86400000}
+
+# Logging
+logging.level.org.springframework=DEBUG
+logging.level.com.cms=DEBUG

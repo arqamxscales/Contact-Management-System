@@ -1,0 +1,6 @@
+spring.application.name=contact-management-backend
+spring.profiles.active=dev
+
+# Default logging level
+logging.level.root=INFO
+logging.level.com.cms=DEBUG
