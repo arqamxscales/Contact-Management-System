@@ -26,8 +26,33 @@ See folder structure in repository root.
 
 ## Setup Instructions
 
-_Will be updated at project completion._
+Comprehensive setup instructions are available in [SETUP.md](./SETUP.md).
+
+### Quick Start
+1. Clone the repository
+2. Set up environment files (`.env`, `application-dev.properties`)
+3. Configure SQL Server database
+4. Run backend: `mvn spring-boot:run`
+5. Run frontend: `npm run dev`
+
+## Git Workflow
+
+This project uses a feature-branch workflow:
+- **main**: Production releases
+- **develop**: Integration branch for features
+- **feature/\***: Feature branches
+
+See [branch-strategy.md](./docs/branch-strategy.md) for detailed guidelines.
+
+## Security
+
+All sensitive files are protected via `.gitignore`:
+- Environment variables (`.env`, `.env.local`)
+- Development configuration (`application-dev.properties`)
+- API keys and secrets
+
+Use example files (`.env.example`, `*.properties.example`) as templates for local setup.
 
 ## Author
 
-[Mohammad Arqam Javed] — 10 Pearls Internship Program 2026
+Mohammad Arqam Javed — 10 Pearls Internship Program 2026
