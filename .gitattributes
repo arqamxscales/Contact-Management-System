@@ -1,0 +1,3 @@
+frontend/** linguist-vendored
+docs/** linguist-documentation
+*.md linguist-documentation
