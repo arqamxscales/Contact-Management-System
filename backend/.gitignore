@@ -1,0 +1,17 @@
+# Backend local secrets/config
+.env
+.env.local
+.env.*.local
+
+# Spring local overrides
+src/main/resources/application-dev.properties
+src/main/resources/application-local.properties
+
+# Build outputs
+/target/
+/out/
+/build/
+
+# Logs
+*.log
+logs/
