@@ -24,6 +24,11 @@ Built during the 10 Pearls Internship Program.
 
 See folder structure in repository root.
 
+The repo follows a folder-aware branch flow:
+- backend work usually lands on `feature/*-backend`
+- frontend work usually lands on `feature/*-frontend`
+- `main` is the stable release branch, and `develop` is the integration branch
+
 ## Setup Instructions
 
 Comprehensive setup instructions are available in [SETUP.md](./SETUP.md).
@@ -41,6 +46,8 @@ This project uses a feature-branch workflow:
 - **main**: Production releases
 - **develop**: Integration branch for features
 - **feature/\***: Feature branches
+
+If you hear someone say `master`, treat it as the same long-lived stable branch idea as `main` for this project.
 
 See [branch-strategy.md](./docs/branch-strategy.md) for detailed guidelines.
 

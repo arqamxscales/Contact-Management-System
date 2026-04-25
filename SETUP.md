@@ -86,6 +86,11 @@ The application uses Hibernate JPA with `ddl-auto=update`. Schemas will be creat
 
 ## Git Workflow
 
+This repo keeps branch ownership aligned with folders:
+- backend changes should stay in `backend/`-focused feature branches
+- frontend changes should stay in `frontend/`-focused feature branches
+- `main` is the stable branch and `develop` is the integration branch
+
 ### Starting a New Feature
 ```bash
 git checkout develop
@@ -106,6 +111,8 @@ git merge feature/your-feature-name
 git push origin develop
 git branch -d feature/your-feature-name
 ```
+
+If your team uses the word `master`, map that idea to the stable production branch used in this repo.
 
 ## Security Notes
 
