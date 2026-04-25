@@ -11,10 +11,16 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
+/**
+ * Contact entity class representing a contact in the system.
+ * Each contact belongs to a user and contains personal/professional information
+ * such as name, email, phone, and address details.
+ */
 @Entity
 @Table(name = "contacts")
 public class Contact {
 
+    // Unique identifier for the contact, auto-generated
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,12 +29,15 @@ public class Contact {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // First name of the contact - required field
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
+    // Last name of the contact - optional field
     @Column(name = "last_name", length = 100)
     private String lastName;
 
+    // Professional or personal title (e.g., Mr., Ms., Dr.)
     @Column(length = 100)
     private String title;
 
@@ -38,9 +47,11 @@ public class Contact {
     @Column(length = 25)
     private String phone;
 
+    // Full address of the contact
     @Column(length = 255)
     private String address;
 
+    // Timestamp when the contact was created - not updatable
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

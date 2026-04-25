@@ -12,10 +12,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * User entity class representing a user account in the system.
+ * Each user can have multiple contacts and manage their own contact information.
+ * Users authenticate using email and password.
+ */
 @Entity
 @Table(name = "users")
 public class User {
 
+    // Unique identifier for the user, auto-generated
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,18 +29,23 @@ public class User {
     @Column(name = "full_name", nullable = false, length = 120)
     private String fullName;
 
+    // Email address used for login - must be unique
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    // Optional phone number - must be unique if provided
     @Column(length = 25, unique = true)
     private String phone;
 
+    // Hashed password stored securely in the database
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    // Timestamp when the user account was created
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    // Bidirectional relationship - one user has many contacts
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     private List<Contact> contacts = new ArrayList<>();
 
