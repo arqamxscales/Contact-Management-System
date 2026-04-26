@@ -114,6 +114,23 @@ class ContactServiceImplTest {
     }
 
     /**
+     * Added today after seeing users type search text with spaces in the UI.
+     */
+    @Test
+    void listContactsTrimsSearchBeforeQuery() {
+        List<Contact> contacts = List.of(testContact);
+        Page<Contact> page = new PageImpl<>(contacts, PageRequest.of(0, 1000), 1);
+        given(contactRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase("Jane", "Jane", PageRequest.of(0, 1000)))
+            .willReturn(page);
+
+        List<ContactResponse> result = contactService.listContacts("  Jane  ");
+
+        assertEquals(1, result.size());
+        verify(contactRepository)
+            .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase("Jane", "Jane", PageRequest.of(0, 1000));
+    }
+
+    /**
      * Test explicit paginated listing for contacts.
      */
     @Test
@@ -174,6 +191,7 @@ class ContactServiceImplTest {
     @Test
     void createContactSavesAndReturnsContact() {
         given(userRepository.findById(1L)).willReturn(Optional.of(testUser));
+        given(contactRepository.existsByUserIdAndEmailIgnoreCase(1L, "jane@example.com")).willReturn(false);
         given(contactRepository.save(any(Contact.class))).willReturn(testContact);
 
         ContactResponse result = contactService.createContact(contactRequest);
@@ -182,6 +200,17 @@ class ContactServiceImplTest {
         assertEquals("Jane", result.getFirstName());
         assertEquals(1L, result.getUserId());
         verify(contactRepository).save(any(Contact.class));
+    }
+
+    /**
+     * Regression test from today's duplicate-email hardening task.
+     */
+    @Test
+    void createContactThrowsExceptionWhenEmailAlreadyExistsForUser() {
+        given(userRepository.findById(1L)).willReturn(Optional.of(testUser));
+        given(contactRepository.existsByUserIdAndEmailIgnoreCase(1L, "jane@example.com")).willReturn(true);
+
+        assertThrows(IllegalArgumentException.class, () -> contactService.createContact(contactRequest));
     }
 
     /**
@@ -201,6 +230,7 @@ class ContactServiceImplTest {
     @Test
     void updateContactUpdatesAndReturnsContact() {
         given(contactRepository.findById(1L)).willReturn(Optional.of(testContact));
+        given(contactRepository.existsByUserIdAndEmailIgnoreCaseAndIdNot(1L, "jane@example.com", 1L)).willReturn(false);
         given(contactRepository.save(any(Contact.class))).willReturn(testContact);
 
         ContactResponse result = contactService.updateContact(1L, contactRequest);
@@ -208,6 +238,17 @@ class ContactServiceImplTest {
         assertNotNull(result);
         assertEquals("Jane", result.getFirstName());
         verify(contactRepository).save(any(Contact.class));
+    }
+
+    /**
+     * Update should fail if email belongs to another contact of the same user.
+     */
+    @Test
+    void updateContactThrowsExceptionWhenEmailAlreadyExistsForAnotherContact() {
+        given(contactRepository.findById(1L)).willReturn(Optional.of(testContact));
+        given(contactRepository.existsByUserIdAndEmailIgnoreCaseAndIdNot(1L, "jane@example.com", 1L)).willReturn(true);
+
+        assertThrows(IllegalArgumentException.class, () -> contactService.updateContact(1L, contactRequest));
     }
 
     /**

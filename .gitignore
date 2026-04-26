@@ -17,6 +17,9 @@
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.pem
 *.key
 *.crt
@@ -84,3 +87,4 @@ nbproject/
 !.env.example
 !**/.env.example
 !**/application.properties.example
+!**/application-dev.properties.example

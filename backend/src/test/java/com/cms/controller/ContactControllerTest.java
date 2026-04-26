@@ -111,6 +111,23 @@ class ContactControllerTest {
             .andExpect(status().isBadRequest());
     }
 
+                /**
+                 * Today's validation add-on: malformed email should be blocked at request validation layer.
+                 */
+                @Test
+                void createContactFailsWithInvalidEmailFormat() throws Exception {
+                mockMvc.perform(post("/api/contacts")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "userId": 1,
+                          "firstName": "Sam",
+                          "email": "not-an-email"
+                        }
+                        """))
+                    .andExpect(status().isBadRequest());
+                }
+
     /**
      * Test paged endpoint returns expected structure.
      */
@@ -171,6 +188,29 @@ class ContactControllerTest {
             .andExpect(jsonPath("$.status").value(404))
             .andExpect(jsonPath("$.message").value("Contact not found with id 999"))
             .andExpect(jsonPath("$.path").value("/api/contacts/999"));
+    }
+
+    /**
+     * Duplicate-email rule from today's service task should map to a clear 400 response.
+     */
+    @Test
+    void createContactReturns400WhenEmailAlreadyExistsForUser() throws Exception {
+        given(contactService.createContact(any(ContactRequest.class)))
+            .willThrow(new IllegalArgumentException("A contact with this email already exists for the user"));
+
+        mockMvc.perform(post("/api/contacts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "userId": 1,
+                      "firstName": "Sam",
+                      "email": "sam@example.com"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.message").value("A contact with this email already exists for the user"))
+            .andExpect(jsonPath("$.path").value("/api/contacts"));
     }
 
     /**
