@@ -58,8 +58,16 @@ public class ContactServiceImpl implements ContactService {
         Pageable pageable = PageRequest.of(safePage, safeSize);
         Page<Contact> contactPage;
 
-        if (StringUtils.hasText(search)) {
-            contactPage = contactRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(search, search, pageable);
+        // Tiny normalization from today's cleanup task:
+        // users often type spaces around search text; we trim once here.
+        String normalizedSearch = StringUtils.hasText(search) ? search.trim() : search;
+
+        if (StringUtils.hasText(normalizedSearch)) {
+            contactPage = contactRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+                normalizedSearch,
+                normalizedSearch,
+                pageable
+            );
         } else {
             contactPage = contactRepository.findAll(pageable);
         }
@@ -83,6 +91,9 @@ public class ContactServiceImpl implements ContactService {
         // Verify that the user exists before creating a contact
         User user = userRepository.findById(request.getUserId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + request.getUserId()));
+
+        // We had duplicate rows from manual testing before; this guard keeps data tidy.
+        validateDuplicateEmailForCreate(request.getUserId(), request.getEmail());
 
         // Create a new contact entity and populate it with request data
         Contact contact = new Contact();
@@ -126,6 +137,10 @@ public class ContactServiceImpl implements ContactService {
         Contact contact = contactRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Contact not found with id " + id));
 
+        // On update we allow keeping same email, but block collisions with another contact.
+        Long userId = Objects.nonNull(contact.getUser()) ? contact.getUser().getId() : null;
+        validateDuplicateEmailForUpdate(userId, request.getEmail(), id);
+
         // Update contact fields with new values from request
         contact.setFirstName(request.getFirstName());
         contact.setLastName(request.getLastName());
@@ -136,7 +151,8 @@ public class ContactServiceImpl implements ContactService {
 
         // Save the updated contact to database
         Contact updatedContact = contactRepository.save(contact);
-        log.info("Updated contact {} for user {}", updatedContact.getId(), contact.getUser().getId());
+        Long updatedUserId = Objects.nonNull(contact.getUser()) ? contact.getUser().getId() : null;
+        log.info("Updated contact {} for user {}", updatedContact.getId(), updatedUserId);
         return toResponse(updatedContact);
     }
 
@@ -149,6 +165,33 @@ public class ContactServiceImpl implements ContactService {
 
         // Delete the contact from database
         contactRepository.deleteById(id);
-        log.info("Deleted contact {} for user {}", id, contact.getUser().getId());
+        Long userId = Objects.nonNull(contact.getUser()) ? contact.getUser().getId() : null;
+        log.info("Deleted contact {} for user {}", id, userId);
+    }
+
+    /**
+     * Validates duplicate email rules on create.
+     */
+    private void validateDuplicateEmailForCreate(Long userId, String email) {
+        if (!StringUtils.hasText(email)) {
+            return;
+        }
+
+        if (contactRepository.existsByUserIdAndEmailIgnoreCase(userId, email.trim())) {
+            throw new IllegalArgumentException("A contact with this email already exists for the user");
+        }
+    }
+
+    /**
+     * Validates duplicate email rules on update.
+     */
+    private void validateDuplicateEmailForUpdate(Long userId, String email, Long currentContactId) {
+        if (userId == null || !StringUtils.hasText(email)) {
+            return;
+        }
+
+        if (contactRepository.existsByUserIdAndEmailIgnoreCaseAndIdNot(userId, email.trim(), currentContactId)) {
+            throw new IllegalArgumentException("A contact with this email already exists for the user");
+        }
     }
 }

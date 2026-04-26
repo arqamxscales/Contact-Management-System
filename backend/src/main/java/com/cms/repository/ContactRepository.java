@@ -19,4 +19,14 @@ public interface ContactRepository extends JpaRepository<Contact, Long> {
         String lastName,
         Pageable pageable
     );
+
+    /**
+     * Checks whether a user already owns a contact with the given email.
+     */
+    boolean existsByUserIdAndEmailIgnoreCase(Long userId, String email);
+
+    /**
+     * Same duplicate-email check but excludes current contact id for updates.
+     */
+    boolean existsByUserIdAndEmailIgnoreCaseAndIdNot(Long userId, String email, Long id);
 }

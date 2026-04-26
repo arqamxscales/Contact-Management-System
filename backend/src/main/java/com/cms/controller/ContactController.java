@@ -118,3 +118,7 @@ public class ContactController {
         contactService.deleteContact(id);
         return ResponseEntity.noContent().build();
     }
+
+    // Small maintenance note: keep this class closing brace intact.
+    // It got dropped once during a squash and wasted debugging time.
+}
