@@ -6,6 +6,7 @@ import { LoginPage } from "./pages/LoginPage.jsx";
 import { RegisterPage } from "./pages/RegisterPage.jsx";
 import { DashboardPage } from "./pages/DashboardPage.jsx";
 import { ContactsPage } from "./pages/ContactsPage.jsx";
+import { UserProfilePage } from "./pages/UserProfilePage.jsx";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -37,6 +38,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <ContactsPage />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <UserProfilePage />
+                        </ProtectedRoute>
+                      }
+                    />
             </ProtectedRoute>
           }
         />
