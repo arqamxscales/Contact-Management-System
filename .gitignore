@@ -1,90 +1,140 @@
-# macOS
+# ==============================================================================
+# OPERATING SYSTEM FILES - macOS, Windows, Linux artifacts
+# Keep repos clean from OS-specific temporary and metadata files
+# ==============================================================================
 .DS_Store
 .AppleDouble
 .LSOverride
 *.swp
 *.swo
 *~
-
-# IDE
-.idea/
-.vscode/
-*.iml
-*.sublime-project
-*.sublime-workspace
-
-# Environment & Secrets
-.env
-.env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-*.keystore
-
-# Configuration (dev-specific)
-application-dev.properties
-application-local.properties
-
-# Logs
-*.log
-logs/
-*.log.*
-
-# Java / Maven
-backend/target/
-backend/out/
-backend/.gradle/
-backend/build/
-*.class
-*.jar
-*.war
-*.ear
-.classpath
-.project
-.settings/
-
-# Node / Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/build/
-frontend/.nuxt/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Coverage
-coverage/
-.coverage
-htmlcov/
-
-# OS
 Thumbs.db
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
 
-# Temporary files
-*.tmp
-*.temp
-tmp/
-temp/
+# ==============================================================================
+# IDE AND EDITOR CONFIGURATION - IDE-specific files that are user-dependent
+# Each developer has their own IDE preferences; these shouldn't be shared
+# ==============================================================================
+.idea/                          # IntelliJ IDEA workspace configuration
+.vscode/                        # Visual Studio Code workspace settings
+*.iml                          # IntelliJ module files
+*.sublime-project              # Sublime Text project files
+*.sublime-workspace            # Sublime Text workspace files
+nbproject/                     # NetBeans project directory
+.netbeans/                     # NetBeans configuration
 
-# IDEs
-nbproject/
-.netbeans/
+# ==============================================================================
+# ENVIRONMENT VARIABLES AND SECRETS - CRITICAL for security
+# NEVER commit .env files with API keys, passwords, JWT secrets, or DB credentials
+# Each developer/environment has unique credentials that must remain private
+# ==============================================================================
+.env                           # Default environment file with sensitive data
+.env.local                     # Local developer overrides (never commit)
+.env.*.local                   # Environment-specific local files
+.env.development.local         # Development environment secrets
+.env.test.local                # Test environment secrets
+.env.production.local          # Production environment secrets (CRITICAL)
+*.pem                          # PEM-encoded certificates and private keys
+*.key                          # RSA, DSA, EC private keys for SSL/TLS
+*.crt                          # SSL certificate files
+*.p12                          # PKCS12 keystore files
+*.pfx                          # Windows certificate store files
+*.keystore                     # Java keystore files containing keys/certs
+*.jks                          # Java KeyStore files
 
-# Keep examples for setup guidance
-!.env.example
-!**/.env.example
-!**/application.properties.example
-!**/application-dev.properties.example
+
+# ==============================================================================
+# APPLICATION CONFIGURATION - Local developer and environment-specific settings
+# Store examples in repo but never commit actual local configs
+# ==============================================================================
+application-dev.properties         # Development-specific Spring properties (local)
+application-local.properties       # Local developer config (never commit)
+application-test.properties        # Test environment configuration (local)
+
+# ==============================================================================
+# LOGGING OUTPUT - Application runtime logs
+# Log files are generated at runtime and shouldn't be versioned
+# Developers generate logs locally during testing/debugging
+# ==============================================================================
+*.log                              # Application log files
+logs/                              # Log directory for application output
+*.log.*                            # Rotated log files
+
+# ==============================================================================
+# BACKEND BUILD ARTIFACTS - Java/Maven compiled output
+# Maven target/ directory contains compiled bytecode, JARs, WARs
+# These are generated from source files and can be recreated with 'mvn clean install'
+# ==============================================================================
+backend/target/                    # Maven output directory (compiled classes)
+backend/out/                       # IntelliJ build output directory
+backend/.gradle/                   # Gradle build artifacts (if using Gradle)
+backend/build/                     # Gradle build directory
+*.class                            # Compiled Java bytecode
+*.jar                              # Java Archive (application/library)
+*.war                              # Web Archive (deployable application)
+*.ear                              # Enterprise Archive
+.classpath                         # Eclipse Java classpath descriptor
+.project                           # Eclipse project file
+.settings/                         # Eclipse IDE settings directory
+
+# ==============================================================================
+# FRONTEND BUILD ARTIFACTS - Node.js and npm build output
+# node_modules/ is very large (200MB+) and can be regenerated from package-lock.json
+# dist/ and build/ contain minified production builds that can be rebuilt
+# ==============================================================================
+frontend/node_modules/             # npm installed dependencies (regenerate with npm install)
+frontend/dist/                     # Production build output (optimized for deployment)
+frontend/build/                    # Build directory with compiled/bundled code
+frontend/.nuxt/                    # Nuxt.js build artifacts (if applicable)
+npm-debug.log*                     # npm debug logs
+yarn-debug.log*                    # Yarn debug logs
+yarn-error.log*                    # Yarn error logs
+pnpm-debug.log*                    # pnpm debug logs
+lerna-debug.log*                   # Lerna monorepo debug logs
+
+# ==============================================================================
+# CODE COVERAGE AND TEST REPORTS - Auto-generated test metrics
+# Coverage reports are generated during test runs and can be recreated
+# ==============================================================================
+coverage/                          # Code coverage directory (Istanbul, Nyc, etc.)
+.coverage                          # Coverage metadata
+htmlcov/                           # HTML coverage reports
+test-results/                      # Test result artifacts
+.nyc_output/                       # NYC (Istanbul) coverage temp files
+
+# ==============================================================================
+# TEMPORARY AND CACHE FILES - Development scratch files
+# These files are generated during development and testing
+# ==============================================================================
+*.tmp                              # Temporary files
+*.temp                             # Temporary files
+tmp/                               # Temporary directory
+temp/                              # Temporary directory
+.cache/                            # Cache directory
+*.swp                              # Vim swap files
+
+# ==============================================================================
+# DATABASE AND STATE FILES - Local development databases
+# SQLite and H2 in-memory databases create local files during testing
+# ==============================================================================
+*.db                               # SQLite database file
+*.sqlite                           # SQLite database
+*.sqlite3                          # SQLite3 database
+*.h2.db                            # H2 in-memory database files
+*.db-journal                       # SQLite rollback journal
+
+# ==============================================================================
+# ALLOWED EXCEPTIONS - Keep these files for setup and reference
+# Example files are committed so new developers can set up their own configs
+# ==============================================================================
+!.env.example                      # Example .env template (DO COMMIT)
+!**/.env.example                   # Environment variable examples
+!**/application.properties.example # Spring properties template (DO COMMIT)
+!**/application-dev.properties.example # Dev properties template (DO COMMIT)
+
+# ==============================================================================
+# KEEP THESE FILES FOR REPRODUCIBLE BUILDS
+# Lock files ensure all developers use same dependency versions
+# ==============================================================================
+# package-lock.json - Uncomment below if you want to commit lock file
+# pom.xml - ALWAYS commit for Maven reproducibility
+# .npmrc - Can commit if no credentials (use .npmrc.example for credentials)
