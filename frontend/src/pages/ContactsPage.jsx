@@ -1,69 +1,156 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState.jsx";
 import { InfoCard } from "../components/InfoCard.jsx";
 import { ContactModal } from "../components/ContactModal.jsx";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal.jsx";
-
-// Demo contacts. When the backend is ready, replace this with API calls.
-const demoContacts = [
-  { id: 1, firstName: "Sam", lastName: "Lee", title: "Mr", email: "sam@example.com" },
-  { id: 2, firstName: "Jane", lastName: "Smith", title: "Dr", email: "jane@example.com" },
-  { id: 3, firstName: "Bob", lastName: "Johnson", title: "Mr", email: "bob@example.com" },
-  { id: 4, firstName: "Alice", lastName: "Brown", title: "Ms", email: "alice@example.com" }
-];
+import {
+  createContact,
+  deleteContact,
+  deleteContactsBatch,
+  exportContactsCsv,
+  listContactsPaged,
+  searchContactsAdvanced,
+  updateContact
+} from "../api/contactApi.js";
 
 export function ContactsPage() {
-  // State for search, modals, pagination, and demo contacts management.
+  // These filters are intentionally explicit so users can narrow by label quickly.
   const [searchTerm, setSearchTerm] = useState("");
-  const [contacts, setContacts] = useState(demoContacts);
+  const [emailLabel, setEmailLabel] = useState("");
+  const [phoneLabel, setPhoneLabel] = useState("");
+
+  const [contacts, setContacts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(2);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [selectedContact, setSelectedContact] = useState(null);
+  const [selectedContactIds, setSelectedContactIds] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Filter contacts by search term (case-insensitive).
-  const filteredContacts = useMemo(() => {
-    if (!searchTerm) return contacts;
-    const term = searchTerm.toLowerCase();
-    return contacts.filter(
-      (c) =>
-        c.firstName.toLowerCase().includes(term) ||
-        c.lastName.toLowerCase().includes(term)
-    );
-  }, [contacts, searchTerm]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Calculate pagination.
-  const totalPages = Math.ceil(filteredContacts.length / pageSize);
-  const paginatedContacts = filteredContacts.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
+  const hasAdvancedFilters = useMemo(
+    () => Boolean(emailLabel || phoneLabel),
+    [emailLabel, phoneLabel]
   );
 
-  const handleCreateContact = (formData) => {
-    const newContact = {
-      ...formData,
-      id: Math.max(...contacts.map((c) => c.id), 0) + 1
-    };
-    const next = [...contacts, newContact];
-    setContacts(next);
-    // After creating a new contact, jump to the last page so the user sees it immediately.
-    setCurrentPage(Math.ceil(next.length / pageSize));
-    setShowCreateModal(false);
+  async function fetchContacts() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const params = {
+        page: currentPage - 1,
+        size: pageSize,
+        search: searchTerm || undefined,
+        emailLabel: emailLabel || undefined,
+        phoneLabel: phoneLabel || undefined
+      };
+
+      // We keep these two branches separate so backend route changes are less risky.
+      const response = hasAdvancedFilters
+        ? await searchContactsAdvanced(params)
+        : await listContactsPaged(params);
+
+      const nextContacts = response?.content ?? [];
+      setContacts(nextContacts);
+      setTotalPages(Math.max(response?.totalPages ?? 1, 1));
+
+      // Keep only selected ids that still exist after filtering/page changes.
+      const idSet = new Set(nextContacts.map((c) => c.id));
+      setSelectedContactIds((prev) => prev.filter((id) => idSet.has(id)));
+    } catch (fetchError) {
+      setError(fetchError.response?.data?.message ?? "Could not load contacts right now.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchContacts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize, searchTerm, emailLabel, phoneLabel]);
+
+  const handleCreateContact = async (formData) => {
+    try {
+      await createContact(formData);
+      setShowCreateModal(false);
+      await fetchContacts();
+    } catch (createError) {
+      setError(createError.response?.data?.message ?? "Could not create contact.");
+    }
   };
 
-  const handleUpdateContact = (formData) => {
-    setContacts(
-      contacts.map((c) => (c.id === selectedContact.id ? { ...formData, id: c.id } : c))
-    );
-    setShowUpdateModal(false);
-    setSelectedContact(null);
+  const handleUpdateContact = async (formData) => {
+    if (!selectedContact?.id) return;
+    try {
+      await updateContact(selectedContact.id, formData);
+      setShowUpdateModal(false);
+      setSelectedContact(null);
+      await fetchContacts();
+    } catch (updateError) {
+      setError(updateError.response?.data?.message ?? "Could not update contact.");
+    }
   };
 
-  const handleDeleteContact = (contactId) => {
-    setContacts(contacts.filter((c) => c.id !== contactId));
-    setShowDeleteModal(false);
+  const handleDeleteContact = async (contactId) => {
+    try {
+      await deleteContact(contactId);
+      setShowDeleteModal(false);
+      setSelectedContact(null);
+      await fetchContacts();
+    } catch (deleteError) {
+      setError(deleteError.response?.data?.message ?? "Could not delete contact.");
+    }
+  };
+
+  const toggleSelectContact = (contactId, checked) => {
+    setSelectedContactIds((prev) => {
+      if (checked) {
+        return Array.from(new Set([...prev, contactId]));
+      }
+      return prev.filter((id) => id !== contactId);
+    });
+  };
+
+  const handleSelectAllOnPage = (checked) => {
+    if (checked) {
+      setSelectedContactIds((prev) => Array.from(new Set([...prev, ...contacts.map((c) => c.id)])));
+      return;
+    }
+
+    const pageIds = new Set(contacts.map((c) => c.id));
+    setSelectedContactIds((prev) => prev.filter((id) => !pageIds.has(id)));
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedContactIds.length === 0) return;
+    try {
+      await deleteContactsBatch(selectedContactIds);
+      setSelectedContactIds([]);
+      await fetchContacts();
+    } catch (batchError) {
+      setError(batchError.response?.data?.message ?? "Batch delete failed.");
+    }
+  };
+
+  const handleBatchExport = async () => {
+    if (selectedContactIds.length === 0) return;
+    try {
+      const blob = await exportContactsCsv(selectedContactIds);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "contacts-export.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (exportError) {
+      setError(exportError.response?.data?.message ?? "Export failed.");
+    }
   };
 
   const openUpdateModal = (contact) => {
@@ -78,35 +165,104 @@ export function ContactsPage() {
 
   return (
     <InfoCard title="Contacts">
-      {/* Search bar */}
-      <input
-        type="text"
-        placeholder="Search by first or last name..."
-        value={searchTerm}
-        onChange={(e) => {
-          setSearchTerm(e.target.value);
-          setCurrentPage(1); // Reset to first page on new search.
-        }}
-        style={searchInputStyle}
-      />
+      {error ? <p style={errorStyle}>{error}</p> : null}
 
-      {/* Create button */}
-      <button
-        onClick={() => setShowCreateModal(true)}
-        style={createButtonStyle}
-      >
-        + Create Contact
-      </button>
+      <div style={toolbarStyle}>
+        <input
+          type="text"
+          placeholder="Search by name, email, phone..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          style={searchInputStyle}
+        />
 
-      {/* Contacts list or empty state */}
-      {paginatedContacts.length > 0 ? (
+        <select
+          value={emailLabel}
+          onChange={(e) => {
+            setEmailLabel(e.target.value);
+            setCurrentPage(1);
+          }}
+          style={selectStyle}
+          aria-label="Filter by email label"
+        >
+          <option value="">All email labels</option>
+          <option value="work">Work email</option>
+          <option value="personal">Personal email</option>
+          <option value="other">Other email</option>
+        </select>
+
+        <select
+          value={phoneLabel}
+          onChange={(e) => {
+            setPhoneLabel(e.target.value);
+            setCurrentPage(1);
+          }}
+          style={selectStyle}
+          aria-label="Filter by phone label"
+        >
+          <option value="">All phone labels</option>
+          <option value="work">Work phone</option>
+          <option value="home">Home phone</option>
+          <option value="mobile">Mobile phone</option>
+          <option value="other">Other phone</option>
+        </select>
+      </div>
+
+      <div style={actionsBarStyle}>
+        <button onClick={() => setShowCreateModal(true)} style={createButtonStyle}>
+          + Create Contact
+        </button>
+
+        <button
+          onClick={handleBatchDelete}
+          disabled={selectedContactIds.length === 0}
+          style={dangerButtonStyle}
+        >
+          Delete Selected ({selectedContactIds.length})
+        </button>
+
+        <button
+          onClick={handleBatchExport}
+          disabled={selectedContactIds.length === 0}
+          style={secondaryButtonStyle}
+        >
+          Export Selected CSV
+        </button>
+      </div>
+
+      {loading ? (
+        <p style={mutedTextStyle}>Loading contacts...</p>
+      ) : contacts.length > 0 ? (
         <>
+          <label style={selectAllStyle}>
+            <input
+              type="checkbox"
+              checked={contacts.length > 0 && contacts.every((c) => selectedContactIds.includes(c.id))}
+              onChange={(e) => handleSelectAllOnPage(e.target.checked)}
+            />
+            Select all contacts on this page
+          </label>
+
           <div style={gridStyle}>
-            {paginatedContacts.map((contact) => (
+            {contacts.map((contact) => (
               <article key={contact.id} style={contactCardStyle}>
+                <label style={checkboxStyle}>
+                  <input
+                    type="checkbox"
+                    checked={selectedContactIds.includes(contact.id)}
+                    onChange={(e) => toggleSelectContact(contact.id, e.target.checked)}
+                    aria-label={`select-contact-${contact.id}`}
+                  />
+                  Select
+                </label>
                 <strong>{contact.firstName} {contact.lastName}</strong>
                 <p style={mutedTextStyle}>{contact.title}</p>
-                <p style={{ marginBottom: "0.5rem" }}>{contact.email}</p>
+                <p style={{ marginBottom: "0.5rem" }}>
+                  {contact.email ?? contact?.emails?.[0]?.address ?? "No email"}
+                </p>
                 <div style={cardActionsStyle}>
                   <button
                     onClick={() => openUpdateModal(contact)}
@@ -153,9 +309,9 @@ export function ContactsPage() {
                 }}
                 style={pageSizeSelectStyle}
               >
-                <option value={2}>2 per page</option>
                 <option value={5}>5 per page</option>
                 <option value={10}>10 per page</option>
+                <option value={20}>20 per page</option>
               </select>
             </div>
           )}
@@ -164,8 +320,8 @@ export function ContactsPage() {
         <EmptyState
           title="No contacts found"
           message={
-            searchTerm
-              ? "Try a different search term."
+            searchTerm || emailLabel || phoneLabel
+              ? "Try different filters or clear the current search."
               : "Create your first contact to get started."
           }
         />
@@ -203,12 +359,31 @@ export function ContactsPage() {
 }
 
 const searchInputStyle = {
-  width: "100%",
   border: "1px solid #d1d5db",
   borderRadius: "0.75rem",
   padding: "0.8rem 0.9rem",
-  marginBottom: "1rem",
   fontSize: "1rem"
+};
+
+const toolbarStyle = {
+  display: "grid",
+  gridTemplateColumns: "2fr 1fr 1fr",
+  gap: "0.75rem",
+  marginBottom: "1rem"
+};
+
+const actionsBarStyle = {
+  display: "flex",
+  gap: "0.75rem",
+  marginBottom: "1rem",
+  flexWrap: "wrap"
+};
+
+const selectStyle = {
+  border: "1px solid #d1d5db",
+  borderRadius: "0.75rem",
+  padding: "0.8rem 0.9rem",
+  background: "white"
 };
 
 const createButtonStyle = {
@@ -218,7 +393,39 @@ const createButtonStyle = {
   background: "#4f46e5",
   color: "white",
   cursor: "pointer",
-  marginBottom: "1.5rem"
+};
+
+const secondaryButtonStyle = {
+  border: "1px solid #d1d5db",
+  borderRadius: "0.8rem",
+  padding: "0.9rem 1rem",
+  background: "white",
+  color: "#1f2937",
+  cursor: "pointer"
+};
+
+const dangerButtonStyle = {
+  border: "1px solid #dc2626",
+  borderRadius: "0.8rem",
+  padding: "0.9rem 1rem",
+  background: "white",
+  color: "#dc2626",
+  cursor: "pointer"
+};
+
+const selectAllStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.5rem",
+  marginBottom: "0.75rem",
+  color: "#374151"
+};
+
+const checkboxStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.5rem",
+  marginBottom: "0.5rem"
 };
 
 const gridStyle = {
@@ -236,6 +443,11 @@ const contactCardStyle = {
 };
 
 const mutedTextStyle = { color: "#6b7280", marginTop: 0 };
+
+const errorStyle = {
+  margin: "0 0 0.8rem 0",
+  color: "#b91c1c"
+};
 
 const cardActionsStyle = {
   display: "flex",

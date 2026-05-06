@@ -1,147 +1,143 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ContactsPage } from "../pages/ContactsPage.jsx";
 
-// Mock modals to avoid complexity in this test.
+vi.mock("../api/contactApi.js", () => ({
+  listContactsPaged: vi.fn(),
+  searchContactsAdvanced: vi.fn(),
+  createContact: vi.fn(),
+  updateContact: vi.fn(),
+  deleteContact: vi.fn(),
+  deleteContactsBatch: vi.fn(),
+  exportContactsCsv: vi.fn()
+}));
+
 vi.mock("../components/ContactModal.jsx", () => ({
-  ContactModal: ({ isOpen, onClose, contact, onSave }) => (
+  ContactModal: ({ isOpen, contact, onSave }) =>
     isOpen ? (
       <div data-testid="contact-modal">
         {contact ? "Update Modal" : "Create Modal"}
-        <button onClick={() => onSave({ firstName: "Test", lastName: "User", email: "test@example.com", title: "Mr", phone: "" })}>
+        <button onClick={() => onSave({ firstName: "Test", lastName: "User", email: "test@example.com" })}>
           Save
         </button>
       </div>
     ) : null
-  )
 }));
 
 vi.mock("../components/ConfirmDeleteModal.jsx", () => ({
-  ConfirmDeleteModal: ({ isOpen, onClose, onConfirm }) => (
+  ConfirmDeleteModal: ({ isOpen, onConfirm }) =>
     isOpen ? (
       <div data-testid="delete-modal">
         <button onClick={() => onConfirm(1)}>Confirm Delete</button>
       </div>
     ) : null
-  )
 }));
 
+import {
+  createContact,
+  deleteContactsBatch,
+  exportContactsCsv,
+  listContactsPaged,
+  searchContactsAdvanced
+} from "../api/contactApi.js";
+
+const pageResponse = {
+  content: [
+    { id: 1, firstName: "Sam", lastName: "Lee", title: "Mr", email: "sam@example.com" },
+    { id: 2, firstName: "Jane", lastName: "Smith", title: "Dr", email: "jane@example.com" }
+  ],
+  totalPages: 2
+};
+
 describe("ContactsPage", () => {
-  it("renders search input and create button", () => {
-    render(
-      <MemoryRouter>
-        <ContactsPage />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByPlaceholderText(/Search by first or last name/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Create Contact/ })).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listContactsPaged.mockResolvedValue(pageResponse);
+    searchContactsAdvanced.mockResolvedValue(pageResponse);
+    createContact.mockResolvedValue({});
+    deleteContactsBatch.mockResolvedValue({ successCount: 1 });
+    exportContactsCsv.mockResolvedValue(new Blob(["id,name\\n1,Sam"]));
   });
 
-  it("displays paginated contacts", () => {
+  it("loads contacts from API on render", async () => {
     render(
       <MemoryRouter>
         <ContactsPage />
       </MemoryRouter>
     );
 
-    // First page should show only 2 contacts (default page size).
+    await waitFor(() => expect(listContactsPaged).toHaveBeenCalled());
     expect(screen.getByText("Sam Lee")).toBeInTheDocument();
-    expect(screen.getByText("Jane Smith")).toBeInTheDocument();
-    expect(screen.queryByText("Bob Johnson")).not.toBeInTheDocument();
   });
 
-  it("filters contacts by search term", async () => {
+  it("uses advanced helper when label filter is set", async () => {
     const user = userEvent.setup();
+
     render(
       <MemoryRouter>
         <ContactsPage />
       </MemoryRouter>
     );
 
-    const searchInput = screen.getByPlaceholderText(/Search by first or last name/);
-    await user.type(searchInput, "Bob");
+    await user.selectOptions(screen.getByLabelText(/Filter by email label/i), "work");
 
-    expect(screen.getByText("Bob Johnson")).toBeInTheDocument();
-    expect(screen.queryByText("Sam Lee")).not.toBeInTheDocument();
+    await waitFor(() => expect(searchContactsAdvanced).toHaveBeenCalled());
   });
 
-  it("handles pagination navigation", async () => {
+  it("creates contact through modal", async () => {
     const user = userEvent.setup();
+
     render(
       <MemoryRouter>
         <ContactsPage />
       </MemoryRouter>
     );
 
-    // Click next page button.
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    await user.click(nextButton);
-
-    // Second page should show different contacts.
-    expect(screen.queryByText("Sam Lee")).not.toBeInTheDocument();
-    expect(screen.getByText("Bob Johnson")).toBeInTheDocument();
-  });
-
-  it("shows empty state when no search results", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <ContactsPage />
-      </MemoryRouter>
-    );
-
-    const searchInput = screen.getByPlaceholderText(/Search by first or last name/);
-    await user.type(searchInput, "Nonexistent");
-
-    expect(screen.getByText("No contacts found")).toBeInTheDocument();
-  });
-
-  it("opens create modal on create button click", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <ContactsPage />
-      </MemoryRouter>
-    );
-
-    await user.click(screen.getByRole("button", { name: /Create Contact/ }));
-
-    expect(screen.getByTestId("contact-modal")).toBeInTheDocument();
-    expect(screen.getByText("Create Modal")).toBeInTheDocument();
-  });
-
-  it("adds new contact when saved from modal", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <ContactsPage />
-      </MemoryRouter>
-    );
-
-    await user.click(screen.getByRole("button", { name: /Create Contact/ }));
+    await user.click(screen.getByRole("button", { name: /Create Contact/i }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    // New contact should appear in the list.
-    expect(screen.getByText("Test User")).toBeInTheDocument();
+    await waitFor(() => expect(createContact).toHaveBeenCalled());
   });
 
-  it("changes page size", async () => {
+  it("runs batch delete with selected IDs", async () => {
     const user = userEvent.setup();
+
     render(
       <MemoryRouter>
         <ContactsPage />
       </MemoryRouter>
     );
 
-    const pageSelect = screen.getByDisplayValue("2 per page");
-    await user.selectOptions(pageSelect, "5");
+    await waitFor(() => expect(screen.getByLabelText("select-contact-1")).toBeInTheDocument());
 
-    // All demo contacts should now fit on one page.
-    expect(screen.getByText("Sam Lee")).toBeInTheDocument();
-    expect(screen.getByText("Alice Brown")).toBeInTheDocument();
+    await user.click(screen.getByLabelText("select-contact-1"));
+    await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
+
+    await waitFor(() => expect(deleteContactsBatch).toHaveBeenCalledWith([1]));
+  });
+
+  it("runs export with selected IDs", async () => {
+    const user = userEvent.setup();
+    const createObjectURLSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:url");
+    const revokeObjectURLSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    render(
+      <MemoryRouter>
+        <ContactsPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByLabelText("select-contact-2")).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText("select-contact-2"));
+    await user.click(screen.getByRole("button", { name: /Export Selected CSV/i }));
+
+    await waitFor(() => expect(exportContactsCsv).toHaveBeenCalledWith([2]));
+
+    createObjectURLSpy.mockRestore();
+    revokeObjectURLSpy.mockRestore();
   });
 });
