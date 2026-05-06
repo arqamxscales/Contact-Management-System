@@ -11,13 +11,25 @@ export function AuthProvider({ children }) {
   const login = (nextUser, token) => {
     // Session storage here would be fine too, but localStorage keeps this demo simple.
     window.localStorage.setItem("cms_user", JSON.stringify(nextUser));
-    window.localStorage.setItem("cms_token", token);
+    if (typeof token === "string") {
+      window.localStorage.setItem("cms_token", token);
+      window.localStorage.setItem("cms_access_token", token);
+    } else {
+      // New login payload supports dedicated access + refresh token pair.
+      window.localStorage.setItem("cms_token", token?.accessToken ?? "");
+      window.localStorage.setItem("cms_access_token", token?.accessToken ?? "");
+      if (token?.refreshToken) {
+        window.localStorage.setItem("cms_refresh_token", token.refreshToken);
+      }
+    }
     setUser(nextUser);
   };
 
   const logout = () => {
     window.localStorage.removeItem("cms_user");
     window.localStorage.removeItem("cms_token");
+    window.localStorage.removeItem("cms_access_token");
+    window.localStorage.removeItem("cms_refresh_token");
     setUser(null);
   };
 

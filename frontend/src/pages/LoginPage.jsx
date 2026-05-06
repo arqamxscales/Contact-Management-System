@@ -19,8 +19,15 @@ export function LoginPage() {
 
     try {
       const response = await loginUser(form);
-      // Demo note: backend may return user payload directly, so we store the same object.
-      login(response, "demo-token");
+      // Backend variants:
+      // 1) { user, accessToken, refreshToken }
+      // 2) { id, email, ... } (legacy)
+      const nextUser = response?.user ?? response;
+      const nextToken = response?.accessToken
+        ? { accessToken: response.accessToken, refreshToken: response.refreshToken }
+        : "demo-token";
+
+      login(nextUser, nextToken);
       navigate("/dashboard");
     } catch (loginError) {
       setError(loginError.response?.data?.message ?? "Login failed. Please try again.");
