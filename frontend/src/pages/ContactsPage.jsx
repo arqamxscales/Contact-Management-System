@@ -3,6 +3,7 @@ import { EmptyState } from "../components/EmptyState.jsx";
 import { InfoCard } from "../components/InfoCard.jsx";
 import { ContactModal } from "../components/ContactModal.jsx";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal.jsx";
+import { useAuth } from "../hooks/useAuth.js";
 import {
   createContact,
   deleteContact,
@@ -18,6 +19,7 @@ export function ContactsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [emailLabel, setEmailLabel] = useState("");
   const [phoneLabel, setPhoneLabel] = useState("");
+  const { user } = useAuth();
 
   const [contacts, setContacts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -130,7 +132,7 @@ export function ContactsPage() {
   const handleBatchDelete = async () => {
     if (selectedContactIds.length === 0) return;
     try {
-      await deleteContactsBatch(selectedContactIds);
+      await deleteContactsBatch(selectedContactIds, user?.id);
       setSelectedContactIds([]);
       await fetchContacts();
     } catch (batchError) {
@@ -141,7 +143,7 @@ export function ContactsPage() {
   const handleBatchExport = async () => {
     if (selectedContactIds.length === 0) return;
     try {
-      const blob = await exportContactsCsv(selectedContactIds);
+      const blob = await exportContactsCsv(selectedContactIds, user?.id);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

@@ -38,14 +38,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <ContactsPage />
-                    <Route
-                      path="/profile"
-                      element={
-                        <ProtectedRoute>
-                          <UserProfilePage />
-                        </ProtectedRoute>
-                      }
-                    />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <UserProfilePage />
             </ProtectedRoute>
           }
         />

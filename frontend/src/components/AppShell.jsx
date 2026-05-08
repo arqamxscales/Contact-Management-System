@@ -1,12 +1,23 @@
 import React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
+import { logoutAllSessions } from "../api/authApi.js";
 
 export function AppShell({ children }) {
   const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // We try to revoke server-side sessions first, then clear the local session either way.
+    if (user?.id) {
+      try {
+        await logoutAllSessions({ userId: user.id });
+      } catch (logoutError) {
+        // If the server is unavailable, we still let the user sign out locally.
+        void logoutError;
+      }
+    }
+
     logout();
     navigate("/login");
   };
@@ -16,11 +27,11 @@ export function AppShell({ children }) {
       <header style={headerStyle}>
         <Link to="/dashboard" style={brandStyle}>Contact Manager</Link>
         <nav style={navStyle}>
-          <NavLink to="/dashboard">Dashboard</NavLink>
-          <NavLink to="/contacts">Contacts</NavLink>
-                    <NavLink to="/profile">Profile</NavLink>
+          <NavLink to="/dashboard" style={navLinkStyle}>Dashboard</NavLink>
+          <NavLink to="/contacts" style={navLinkStyle}>Contacts</NavLink>
+          <NavLink to="/profile" style={navLinkStyle}>Profile</NavLink>
           {!isAuthenticated ? (
-            <NavLink to="/login">Login</NavLink>
+            <NavLink to="/login" style={navLinkStyle}>Login</NavLink>
           ) : (
             <button onClick={handleLogout} style={buttonStyle}>Logout {user?.fullName ? `(${user.fullName})` : ""}</button>
           )}
@@ -50,6 +61,11 @@ const navStyle = {
   gap: "1rem",
   alignItems: "center"
 };
+
+const navLinkStyle = ({ isActive }) => ({
+  color: isActive ? "#4f46e5" : "#374151",
+  fontWeight: isActive ? 700 : 500
+});
 
 const buttonStyle = {
   border: "none",

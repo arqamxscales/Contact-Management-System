@@ -33,17 +33,17 @@ export async function deleteContact(id) {
   await apiClient.delete(`/contacts/${id}`);
 }
 
-export async function deleteContactsBatch(contactIds) {
-  const response = await apiClient.post("/contacts/batch-delete", {
+export async function deleteContactsBatch(contactIds, userId) {
+  const response = await apiClient.post(`/contacts/batch-delete?userId=${userId}`, {
     contactIds,
     requireConfirmation: true
   });
   return response.data;
 }
 
-export async function exportContactsCsv(contactIds) {
+export async function exportContactsCsv(contactIds, userId) {
   const response = await apiClient.post(
-    "/contacts/export",
+    `/contacts/export?userId=${userId}`,
     { contactIds },
     { responseType: "blob" }
   );
