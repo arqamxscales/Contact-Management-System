@@ -1,14 +1,23 @@
 package com.cms.controller;
 
+import com.cms.dto.BatchDeleteRequest;
+import com.cms.dto.BatchOperationResponse;
 import com.cms.dto.ContactRequest;
 import com.cms.dto.ContactResponse;
+import com.cms.dto.UserResponse;
+import com.cms.entity.User;
+import com.cms.service.BatchContactService;
 import com.cms.service.ContactService;
+import com.cms.service.UserService;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,9 +42,13 @@ public class ContactController {
     private static final Logger log = LoggerFactory.getLogger(ContactController.class);
 
     private final ContactService contactService;
+    private final BatchContactService batchContactService;
+    private final UserService userService;
 
-    public ContactController(ContactService contactService) {
+    public ContactController(ContactService contactService, BatchContactService batchContactService, UserService userService) {
         this.contactService = contactService;
+        this.batchContactService = batchContactService;
+        this.userService = userService;
     }
 
     /**
@@ -117,6 +130,46 @@ public class ContactController {
         log.debug("Deleting contact with id={}", id);
         contactService.deleteContact(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Deletes a selected group of contacts for the current user.
+     * The frontend sends the authenticated user id so we can keep ownership checks in one place.
+     */
+    @PostMapping("/batch-delete")
+    public ResponseEntity<BatchOperationResponse> deleteContactsBatch(
+        @RequestParam("userId") Long userId,
+        @Valid @RequestBody BatchDeleteRequest request
+    ) {
+        User currentUser = resolveUser(userId);
+        log.debug("Batch deleting contacts for user id={}", userId);
+        return ResponseEntity.ok(batchContactService.deleteContactsBatch(request, currentUser));
+    }
+
+    /**
+     * Exports selected contacts as CSV for the current user.
+     */
+    @PostMapping("/export")
+    public ResponseEntity<byte[]> exportContacts(
+        @RequestParam("userId") Long userId,
+        @Valid @RequestBody BatchDeleteRequest request
+    ) {
+        User currentUser = resolveUser(userId);
+        String csv = batchContactService.exportContactsToCSV(request.getContactIds(), currentUser);
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=contacts-export.csv")
+            .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+            .body(csv.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private User resolveUser(Long userId) {
+        UserResponse userResponse = userService.getUserProfile(userId);
+        User user = new User();
+        user.setId(userResponse.getId());
+        user.setFullName(userResponse.getFullName());
+        user.setEmail(userResponse.getEmail());
+        return user;
     }
 
     // Small maintenance note: keep this class closing brace intact.

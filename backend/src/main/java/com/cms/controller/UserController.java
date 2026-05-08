@@ -1,9 +1,13 @@
 package com.cms.controller;
 
+import com.cms.dto.LogoutAllRequest;
+import com.cms.dto.RefreshTokenRequest;
+import com.cms.dto.TokenResponse;
 import com.cms.dto.UserChangePasswordRequest;
 import com.cms.dto.UserLoginRequest;
 import com.cms.dto.UserRegistrationRequest;
 import com.cms.dto.UserResponse;
+import com.cms.service.TokenService;
 import com.cms.service.UserService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -30,9 +34,11 @@ public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
+    private final TokenService tokenService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, TokenService tokenService) {
         this.userService = userService;
+        this.tokenService = tokenService;
     }
 
     /**
@@ -63,6 +69,27 @@ public class UserController {
         log.info("Login attempt: {}", request.getEmail());
         UserResponse response = userService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Refresh access token using a valid refresh token.
+     * POST /api/auth/refresh
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        log.info("Refreshing access token");
+        return ResponseEntity.ok(tokenService.refreshAccessToken(request));
+    }
+
+    /**
+     * Revoke every active session for the given user.
+     * POST /api/auth/logout-all
+     */
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAll(@Valid @RequestBody LogoutAllRequest request) {
+        log.info("Revoking all sessions for user id={}", request.getUserId());
+        tokenService.revokeAllRefreshTokens(request.getUserId());
+        return ResponseEntity.noContent().build();
     }
 
     /**

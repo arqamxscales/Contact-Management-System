@@ -80,6 +80,21 @@ public class ContactShareService {
     }
 
     /**
+     * Remove every share record for a contact before deleting the contact itself.
+     * This keeps batch delete cleanup straightforward and avoids orphaned share rows.
+     */
+    public void revokeAllSharesForContact(Long contactId) {
+        log.info("Revoking all shares for contact id={}", contactId);
+
+        List<ContactShare> shares = contactShareRepository.findByContactId(contactId);
+        if (!shares.isEmpty()) {
+            contactShareRepository.deleteAll(shares);
+        }
+
+        log.info("Revoked {} shares for contact id={}", shares.size(), contactId);
+    }
+
+    /**
      * Get all contacts shared with a user.
      */
     public List<ContactShare> getContactsSharedWithUser(Long userId) {
