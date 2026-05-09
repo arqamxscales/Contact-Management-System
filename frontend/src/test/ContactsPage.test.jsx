@@ -15,6 +15,15 @@ vi.mock("../api/contactApi.js", () => ({
   exportContactsCsv: vi.fn()
 }));
 
+vi.mock("../hooks/useAuth.js", () => ({
+  useAuth: () => ({
+    user: { id: 1, fullName: "John Doe" },
+    isAuthenticated: true,
+    login: vi.fn(),
+    logout: vi.fn()
+  })
+}));
+
 vi.mock("../components/ContactModal.jsx", () => ({
   ContactModal: ({ isOpen, contact, onSave }) =>
     isOpen ? (
@@ -116,7 +125,7 @@ describe("ContactsPage", () => {
     await user.click(screen.getByLabelText("select-contact-1"));
     await user.click(screen.getByRole("button", { name: /Delete Selected/i }));
 
-    await waitFor(() => expect(deleteContactsBatch).toHaveBeenCalledWith([1]));
+    await waitFor(() => expect(deleteContactsBatch).toHaveBeenCalledWith([1], 1));
   });
 
   it("runs export with selected IDs", async () => {
@@ -135,7 +144,7 @@ describe("ContactsPage", () => {
     await user.click(screen.getByLabelText("select-contact-2"));
     await user.click(screen.getByRole("button", { name: /Export Selected CSV/i }));
 
-    await waitFor(() => expect(exportContactsCsv).toHaveBeenCalledWith([2]));
+    await waitFor(() => expect(exportContactsCsv).toHaveBeenCalledWith([2], 1));
 
     createObjectURLSpy.mockRestore();
     revokeObjectURLSpy.mockRestore();
