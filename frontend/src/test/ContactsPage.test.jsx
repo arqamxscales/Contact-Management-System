@@ -45,6 +45,20 @@ vi.mock("../components/ConfirmDeleteModal.jsx", () => ({
     ) : null
 }));
 
+vi.mock("../components/ContactDetailsModal.jsx", () => ({
+  ContactDetailsModal: ({ isOpen, contact, onClose }) =>
+    isOpen ? (
+      <div data-testid="details-modal">
+        <span>{contact?.firstName}</span>
+        <button onClick={onClose}>Close Details</button>
+      </div>
+    ) : null
+}));
+
+vi.mock("../utils/contactImport.js", () => ({
+  parseContactsCsv: vi.fn()
+}));
+
 import {
   createContact,
   deleteContactsBatch,
@@ -52,6 +66,7 @@ import {
   listContactsPaged,
   searchContactsAdvanced
 } from "../api/contactApi.js";
+import { parseContactsCsv } from "../utils/contactImport.js";
 
 const pageResponse = {
   content: [
@@ -148,5 +163,57 @@ describe("ContactsPage", () => {
 
     createObjectURLSpy.mockRestore();
     revokeObjectURLSpy.mockRestore();
+  });
+
+  it("opens the contact details modal from a card", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ContactsPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText("Sam Lee")).toBeInTheDocument());
+
+    await user.click(screen.getAllByRole("button", { name: /View/i })[0]);
+
+    expect(screen.getByTestId("details-modal")).toBeInTheDocument();
+    expect(screen.getByText("Sam")).toBeInTheDocument();
+  });
+
+  it("imports contacts from a csv file", async () => {
+    const user = userEvent.setup();
+    parseContactsCsv.mockReturnValue([
+      {
+        firstName: "Imported",
+        lastName: "Contact",
+        title: "Manager",
+        email: "imported@example.com",
+        phone: "1234567890",
+        address: "Somewhere"
+      }
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ContactsPage />
+      </MemoryRouter>
+    );
+
+    const fileInput = document.querySelector('input[type="file"]');
+    const csvFile = new File(["firstName,lastName,email\nImported,Contact,imported@example.com"], "contacts.csv", { type: "text/csv" });
+
+    await user.upload(fileInput, csvFile);
+
+    await waitFor(() => expect(createContact).toHaveBeenCalledWith({
+      userId: 1,
+      firstName: "Imported",
+      lastName: "Contact",
+      title: "Manager",
+      email: "imported@example.com",
+      phone: "1234567890",
+      address: "Somewhere"
+    }));
   });
 });
