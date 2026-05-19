@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "../components/EmptyState.jsx";
 import { InfoCard } from "../components/InfoCard.jsx";
 import { ContactModal } from "../components/ContactModal.jsx";
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal.jsx";
+import { ContactDetailsModal } from "../components/ContactDetailsModal.jsx";
 import { useAuth } from "../hooks/useAuth.js";
 import {
   createContact,
@@ -13,6 +14,7 @@ import {
   searchContactsAdvanced,
   updateContact
 } from "../api/contactApi.js";
+import { parseContactsCsv } from "../utils/contactImport.js";
 
 export function ContactsPage() {
   // These filters are intentionally explicit so users can narrow by label quickly.
@@ -27,13 +29,16 @@ export function ContactsPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   const [selectedContact, setSelectedContact] = useState(null);
+  const [detailsContact, setDetailsContact] = useState(null);
   const [selectedContactIds, setSelectedContactIds] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const importInputRef = useRef(null);
 
   const hasAdvancedFilters = useMemo(
     () => Boolean(emailLabel || phoneLabel),
@@ -155,9 +160,53 @@ export function ContactsPage() {
     }
   };
 
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportContacts = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !user?.id) {
+      return;
+    }
+
+    setIsImporting(true);
+    setError("");
+
+    try {
+      const csvText = await readFileAsText(file);
+      const rows = parseContactsCsv(csvText).filter((row) => row.firstName || row.lastName || row.email || row.phone);
+
+      for (const row of rows) {
+        // We keep the import intentionally small and predictable: each parsed row becomes one contact.
+        await createContact({
+          userId: user.id,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          title: row.title,
+          email: row.email,
+          phone: row.phone,
+          address: row.address
+        });
+      }
+
+      await fetchContacts();
+    } catch (importError) {
+      setError(importError.response?.data?.message ?? "Import failed. Please check the CSV format.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const openUpdateModal = (contact) => {
     setSelectedContact(contact);
     setShowUpdateModal(true);
+  };
+
+  const openDetailsModal = (contact) => {
+    setDetailsContact(contact);
   };
 
   const openDeleteModal = (contact) => {
@@ -233,6 +282,22 @@ export function ContactsPage() {
         >
           Export Selected CSV
         </button>
+
+        <button
+          type="button"
+          onClick={handleImportClick}
+          disabled={isImporting}
+          style={secondaryButtonStyle}
+        >
+          {isImporting ? "Importing..." : "Import CSV"}
+        </button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="text/csv,.csv"
+          onChange={handleImportContacts}
+          style={{ display: "none" }}
+        />
       </div>
 
       {loading ? (
@@ -266,6 +331,12 @@ export function ContactsPage() {
                   {contact.email ?? contact?.emails?.[0]?.address ?? "No email"}
                 </p>
                 <div style={cardActionsStyle}>
+                  <button
+                    onClick={() => openDetailsModal(contact)}
+                    style={secondaryCardButtonStyle}
+                  >
+                    View
+                  </button>
                   <button
                     onClick={() => openUpdateModal(contact)}
                     style={editButtonStyle}
@@ -355,6 +426,12 @@ export function ContactsPage() {
           setSelectedContact(null);
         }}
         onConfirm={handleDeleteContact}
+      />
+
+      <ContactDetailsModal
+        contact={detailsContact}
+        isOpen={Boolean(detailsContact)}
+        onClose={() => setDetailsContact(null)}
       />
     </InfoCard>
   );
@@ -468,6 +545,17 @@ const editButtonStyle = {
   flex: 1
 };
 
+const secondaryCardButtonStyle = {
+  border: "1px solid #d1d5db",
+  borderRadius: "0.5rem",
+  padding: "0.5rem 0.75rem",
+  background: "white",
+  color: "#374151",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  flex: 1
+};
+
 const deleteButtonStyle = {
   border: "1px solid #dc2626",
   borderRadius: "0.5rem",
@@ -505,3 +593,16 @@ const pageSizeSelectStyle = {
   background: "white",
   cursor: "pointer"
 };
+
+function readFileAsText(file) {
+  if (typeof file.text === "function") {
+    return file.text();
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result?.toString() ?? "");
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
+    reader.readAsText(file);
+  });
+}
