@@ -16,6 +16,7 @@ Built during the 10 Pearls Internship Program.
 - JWT Authentication & Authorization
 - Contact CRUD Operations (Create, Read, Update, Delete)
 - Paginated Contact List with Search & Filter
+- Contact detail modal, CSV import helper, and batch export/delete actions
 - Application-wide Logging (SLF4J/Logback)
 - Global Exception Handling
 - Unit Tests (Controllers, Services, Repositories)
@@ -39,6 +40,7 @@ Comprehensive setup instructions are available in [SETUP.md](./SETUP.md).
 3. Configure SQL Server database
 4. Run backend: `mvn spring-boot:run`
 5. Run frontend: `npm run dev`
+6. Use the contacts page to review details, import CSV rows, and manage selections
 
 ## Git Workflow
 
