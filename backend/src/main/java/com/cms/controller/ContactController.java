@@ -4,9 +4,11 @@ import com.cms.dto.BatchDeleteRequest;
 import com.cms.dto.BatchOperationResponse;
 import com.cms.dto.ContactRequest;
 import com.cms.dto.ContactResponse;
+import com.cms.dto.ImportContactsResponse;
 import com.cms.dto.UserResponse;
 import com.cms.entity.User;
 import com.cms.service.BatchContactService;
+import com.cms.service.ContactImportService;
 import com.cms.service.ContactService;
 import com.cms.service.UserService;
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * REST controller for managing contact operations.
@@ -43,11 +46,13 @@ public class ContactController {
 
     private final ContactService contactService;
     private final BatchContactService batchContactService;
+    private final ContactImportService contactImportService;
     private final UserService userService;
 
-    public ContactController(ContactService contactService, BatchContactService batchContactService, UserService userService) {
+    public ContactController(ContactService contactService, BatchContactService batchContactService, ContactImportService contactImportService, UserService userService) {
         this.contactService = contactService;
         this.batchContactService = batchContactService;
+        this.contactImportService = contactImportService;
         this.userService = userService;
     }
 
@@ -144,6 +149,53 @@ public class ContactController {
         User currentUser = resolveUser(userId);
         log.debug("Batch deleting contacts for user id={}", userId);
         return ResponseEntity.ok(batchContactService.deleteContactsBatch(request, currentUser));
+    }
+
+    /**
+     * Import contacts from a CSV file upload.
+     * The CSV file is read, parsed, and bulk-inserted into the database.
+     * Each row represents one contact with columns: firstName, lastName, email, phone, title, address.
+     * Flexible column naming is supported (e.g., "first_name", "first name" also work).
+     * 
+     * POST /api/contacts/import?userId=123
+     * Content-Type: multipart/form-data
+     * - file: the CSV file to import
+     * 
+     * Returns an ImportContactsResponse with success count, failure count, and detailed error messages.
+     */
+    @PostMapping("/import")
+    public ResponseEntity<ImportContactsResponse> importContacts(
+        @RequestParam("userId") Long userId,
+        @RequestParam("file") MultipartFile file
+    ) {
+        // Resolve the authenticated user and build their context
+        User currentUser = resolveUser(userId);
+        
+        try {
+            // Read the file content as UTF-8 string
+            String csvContent = new String(file.getBytes(), StandardCharsets.UTF_8);
+            
+            log.info("Starting CSV import for user {} with file: {}", userId, file.getOriginalFilename());
+            
+            // Pass to service for parsing and bulk insertion
+            ImportContactsResponse response = contactImportService.importContactsFromCsv(csvContent, currentUser);
+            
+            log.info("CSV import completed for user {}: {} success, {} failed", 
+                userId, response.getSuccessCount(), response.getFailureCount());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error reading CSV file for user {}: {}", userId, e.getMessage(), e);
+            
+            // Build an error response if file reading fails
+            List<String> errorList = List.of("Failed to read file: " + e.getMessage());
+            ImportContactsResponse errorResponse = new ImportContactsResponse(
+                0, 0, 1, errorList, "File upload failed"
+            );
+            
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
     }
 
     /**
