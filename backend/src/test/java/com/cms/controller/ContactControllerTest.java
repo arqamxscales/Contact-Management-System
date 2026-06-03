@@ -3,10 +3,12 @@ package com.cms.controller;
 import com.cms.dto.BatchOperationResponse;
 import com.cms.dto.ContactRequest;
 import com.cms.dto.ContactResponse;
+import com.cms.dto.ImportContactsResponse;
 import com.cms.dto.UserResponse;
 import com.cms.exception.ResourceNotFoundException;
 import com.cms.service.BatchContactService;
 import com.cms.service.ContactService;
+import com.cms.service.ContactImportService;
 import com.cms.service.UserService;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,13 +20,16 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -38,6 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ContactControllerTest {
 
     private static final String CONTACTS_PATH = "/api/contacts";
+    private static final String USER_ID_PARAM = "userId";
+    private static final String SAMPLE_IMPORT_CSV = "firstName,lastName\nJohn,Doe\nJane,Smith";
 
     @Autowired
     private MockMvc mockMvc;
@@ -49,12 +56,15 @@ class ContactControllerTest {
     private BatchContactService batchContactService;
 
     @MockBean
+    private ContactImportService contactImportService;
+
+    @MockBean
     private UserService userService;
 
     @Test
     void listContactsReturnsContacts() throws Exception {
         ContactResponse response = createResponse();
-        given(contactService.listContacts(eq("Sam"))).willReturn(List.of(response));
+        given(contactService.listContacts("Sam")).willReturn(List.of(response));
 
         mockMvc.perform(get(CONTACTS_PATH).param("search", "Sam"))
             .andExpect(status().isOk())
@@ -65,7 +75,7 @@ class ContactControllerTest {
     @Test
     void listContactsReturnsAllWhenNoSearchProvided() throws Exception {
         ContactResponse response = createResponse();
-        given(contactService.listContacts(eq(null))).willReturn(List.of(response));
+        given(contactService.listContacts(null)).willReturn(List.of(response));
 
         mockMvc.perform(get(CONTACTS_PATH))
             .andExpect(status().isOk())
@@ -199,7 +209,7 @@ class ContactControllerTest {
         given(userService.getUserProfile(1L)).willReturn(createUserResponse());
 
         mockMvc.perform(post(CONTACTS_PATH + "/batch-delete")
-                .param("userId", "1")
+            .param(USER_ID_PARAM, "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
@@ -219,7 +229,7 @@ class ContactControllerTest {
         given(userService.getUserProfile(1L)).willReturn(createUserResponse());
 
         mockMvc.perform(post(CONTACTS_PATH + "/export")
-                .param("userId", "1")
+            .param(USER_ID_PARAM, "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
@@ -227,6 +237,40 @@ class ContactControllerTest {
                     }
                     """))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void importContactsUploadsCsvAndReturnsSummary() throws Exception {
+        // This checks the real multipart route, not just a direct method call.
+        given(userService.getUserProfile(1L)).willReturn(createUserResponse());
+
+        ImportContactsResponse response = new ImportContactsResponse(
+            2,
+            2,
+            0,
+            List.of(),
+            "Import completed: 2 succeeded, 0 failed out of 2 total rows"
+        );
+        given(contactImportService.importContactsFromCsv(eq(SAMPLE_IMPORT_CSV), any()))
+            .willReturn(response);
+
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "contacts.csv",
+            "text/csv",
+            SAMPLE_IMPORT_CSV.getBytes()
+        );
+
+        mockMvc.perform(multipart(CONTACTS_PATH + "/import")
+                .file(file)
+                .param(USER_ID_PARAM, "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.successCount").value(2))
+            .andExpect(jsonPath("$.failureCount").value(0))
+            .andExpect(jsonPath("$.totalProcessed").value(2));
+
+        verify(userService).getUserProfile(1L);
+        verify(contactImportService).importContactsFromCsv(eq(SAMPLE_IMPORT_CSV), any());
     }
 
     private ContactResponse createResponse() {
