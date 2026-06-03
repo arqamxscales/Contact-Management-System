@@ -89,6 +89,14 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
+    /**
+     * Backwards-compatible setter used by tests and some helpers.
+     * Stores the raw value into the passwordHash field (no hashing here).
+     */
+    public void setPassword(String rawPassword) {
+        this.passwordHash = rawPassword;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

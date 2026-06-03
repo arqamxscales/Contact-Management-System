@@ -40,6 +40,11 @@ public interface UserService {
     UserResponse getUserProfile(Long userId);
 
     /**
+     * Retrieve a `User` entity by id (used by internal services like TokenService).
+     */
+    com.cms.entity.User getUserById(Long userId);
+
+    /**
      * Change password for a user.
      */
     void changePassword(Long userId, UserChangePasswordRequest request);

@@ -22,4 +22,11 @@ public interface PhoneRepository extends JpaRepository<Phone, Long> {
     
     // Check if a phone number already exists for a user's contacts (prevent duplicates)
     boolean existsByContactUserIdAndNumber(Long userId, String number);
+
+    // Additional convenience signatures used by unit tests
+    java.util.List<Phone> findByContact(com.cms.entity.Contact contact);
+
+    Phone findByContactAndPrimaryTrue(com.cms.entity.Contact contact);
+
+    Phone findByNumber(String number);
 }

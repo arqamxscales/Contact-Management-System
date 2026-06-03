@@ -22,4 +22,11 @@ public interface EmailRepository extends JpaRepository<Email, Long> {
     
     // Check if an email address already exists for a user's contacts (prevent duplicates)
     boolean existsByContactUserIdAndAddress(Long userId, String address);
+
+    // Additional convenience signatures used by unit tests
+    java.util.List<Email> findByContact(com.cms.entity.Contact contact);
+
+    Email findByContactAndPrimaryTrue(com.cms.entity.Contact contact);
+
+    Email findByAddress(String address);
 }

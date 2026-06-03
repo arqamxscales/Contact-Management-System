@@ -44,4 +44,13 @@ public class Email {
         this.address = address;
         this.isPrimary = false;
     }
+
+    // Convenience accessor for tests and callers that expect a `primary` property name.
+    public void setPrimary(boolean primary) {
+        this.isPrimary = primary;
+    }
+
+    public boolean isPrimary() {
+        return Boolean.TRUE.equals(this.isPrimary);
+    }
 }
