@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.Objects;
 
 /**
  * Represents an email address associated with a contact.
@@ -52,5 +53,18 @@ public class Email {
 
     public boolean isPrimary() {
         return Boolean.TRUE.equals(this.isPrimary);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Email email = (Email) o;
+        return id != null && Objects.equals(id, email.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

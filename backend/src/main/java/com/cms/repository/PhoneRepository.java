@@ -26,7 +26,7 @@ public interface PhoneRepository extends JpaRepository<Phone, Long> {
     // Additional convenience signatures used by unit tests
     java.util.List<Phone> findByContact(com.cms.entity.Contact contact);
 
-    Phone findByContactAndPrimaryTrue(com.cms.entity.Contact contact);
+    java.util.List<Phone> findByContactAndPrimaryTrue(com.cms.entity.Contact contact);
 
-    Phone findByNumber(String number);
+    java.util.List<Phone> findByNumber(String number);
 }

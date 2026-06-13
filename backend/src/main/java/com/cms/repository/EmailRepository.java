@@ -26,7 +26,7 @@ public interface EmailRepository extends JpaRepository<Email, Long> {
     // Additional convenience signatures used by unit tests
     java.util.List<Email> findByContact(com.cms.entity.Contact contact);
 
-    Email findByContactAndPrimaryTrue(com.cms.entity.Contact contact);
+    java.util.List<Email> findByContactAndPrimaryTrue(com.cms.entity.Contact contact);
 
-    Email findByAddress(String address);
+    java.util.List<Email> findByAddress(String address);
 }

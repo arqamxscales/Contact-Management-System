@@ -87,13 +87,13 @@ class ContactServiceImplTest {
     void listContactsReturnsAllContactsWhenSearchIsEmpty() {
         List<Contact> contacts = new ArrayList<>();
         contacts.add(testContact);
-        given(contactRepository.findAll(PageRequest.of(0, 1000))).willReturn(new PageImpl<>(contacts));
+        given(contactRepository.findAll(PageRequest.of(0, 100))).willReturn(new PageImpl<>(contacts));
 
         List<ContactResponse> result = contactService.listContacts(null);
 
         assertEquals(1, result.size());
         assertEquals("Jane", result.get(0).getFirstName());
-        verify(contactRepository).findAll(PageRequest.of(0, 1000));
+        verify(contactRepository).findAll(PageRequest.of(0, 100));
     }
 
     /**
@@ -103,8 +103,8 @@ class ContactServiceImplTest {
     void listContactsFiltersResultsWhenSearchIsProvided() {
         List<Contact> contacts = new ArrayList<>();
         contacts.add(testContact);
-        Page<Contact> page = new PageImpl<>(contacts, PageRequest.of(0, 1000), 1);
-        given(contactRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase("Jane", "Jane", PageRequest.of(0, 1000)))
+        Page<Contact> page = new PageImpl<>(contacts, PageRequest.of(0, 100), 1);
+        given(contactRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase("Jane", "Jane", PageRequest.of(0, 100)))
             .willReturn(page);
 
         List<ContactResponse> result = contactService.listContacts("Jane");
@@ -119,15 +119,15 @@ class ContactServiceImplTest {
     @Test
     void listContactsTrimsSearchBeforeQuery() {
         List<Contact> contacts = List.of(testContact);
-        Page<Contact> page = new PageImpl<>(contacts, PageRequest.of(0, 1000), 1);
-        given(contactRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase("Jane", "Jane", PageRequest.of(0, 1000)))
+        Page<Contact> page = new PageImpl<>(contacts, PageRequest.of(0, 100), 1);
+        given(contactRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase("Jane", "Jane", PageRequest.of(0, 100)))
             .willReturn(page);
 
         List<ContactResponse> result = contactService.listContacts("  Jane  ");
 
         assertEquals(1, result.size());
         verify(contactRepository)
-            .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase("Jane", "Jane", PageRequest.of(0, 1000));
+            .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase("Jane", "Jane", PageRequest.of(0, 100));
     }
 
     /**

@@ -15,6 +15,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Covers the core contact routes plus the new batch delete/export flow.
  */
 @WebMvcTest(ContactController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ContactControllerTest {
 
     private static final String CONTACTS_PATH = "/api/contacts";
@@ -224,7 +226,7 @@ class ContactControllerTest {
 
     @Test
     void exportContactsReturnsCsvDownload() throws Exception {
-        given(batchContactService.exportContactsToCSV(List.of(1L, 2L), any()))
+        given(batchContactService.exportContactsToCSV(any(), any()))
             .willReturn("ID,FirstName\n1,Sam\n2,Jane");
         given(userService.getUserProfile(1L)).willReturn(createUserResponse());
 

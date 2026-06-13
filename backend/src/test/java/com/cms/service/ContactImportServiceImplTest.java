@@ -230,7 +230,7 @@ class ContactImportServiceImplTest {
     @Test
     void testImportLargeCSV() {
         // Arrange: Create a CSV with many contacts (but under the 1000 limit)
-        StringBuilder csvContent = new StringBuilder("firstName,lastName,email%n");
+        StringBuilder csvContent = new StringBuilder("firstName,lastName,email\n");
         int contactCount = 100;
         for (int i = 0; i < contactCount; i++) {
             csvContent.append(String.format("Contact%d,User%d,contact%d@example.com%n", i, i, i));

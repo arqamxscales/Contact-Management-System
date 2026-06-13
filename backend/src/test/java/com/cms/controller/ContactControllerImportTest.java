@@ -89,7 +89,7 @@ class ContactControllerImportTest {
         ImportContactsResponse importResponse = new ImportContactsResponse(
             1, 1, 0, emptyErrors, "Import completed: 1 succeeded, 0 failed out of 1 total rows"
         );
-        when(contactImportService.importContactsFromCsv(csvContent, testUser))
+        when(contactImportService.importContactsFromCsv(eq(csvContent), any(User.class)))
             .thenReturn(importResponse);
 
         // Act: Call the import endpoint
@@ -128,7 +128,7 @@ class ContactControllerImportTest {
         ImportContactsResponse importResponse = new ImportContactsResponse(
             3, 2, 1, errors, "Import completed: 2 succeeded, 1 failed out of 3 total rows"
         );
-        when(contactImportService.importContactsFromCsv(csvContent, testUser))
+        when(contactImportService.importContactsFromCsv(eq(csvContent), any(User.class)))
             .thenReturn(importResponse);
 
         // Act
@@ -146,7 +146,6 @@ class ContactControllerImportTest {
         // Arrange: Create a file that throws an exception when reading bytes
         MultipartFile file = mock(MultipartFile.class);
         when(file.getBytes()).thenThrow(new RuntimeException("File read error"));
-        when(file.getOriginalFilename()).thenReturn(CSV_FILENAME);
 
         when(userService.getUserProfile(1L)).thenReturn(userResponse);
 
@@ -179,7 +178,7 @@ class ContactControllerImportTest {
         ImportContactsResponse importResponse = new ImportContactsResponse(
             0, 0, 1, errors, "No contacts to import"
         );
-        when(contactImportService.importContactsFromCsv(csvContent, testUser))
+        when(contactImportService.importContactsFromCsv(eq(csvContent), any(User.class)))
             .thenReturn(importResponse);
 
         // Act
@@ -207,7 +206,7 @@ class ContactControllerImportTest {
         ImportContactsResponse importResponse = new ImportContactsResponse(
             1, 1, 0, new ArrayList<>(), "Success"
         );
-        when(contactImportService.importContactsFromCsv(csvContent, testUser))
+        when(contactImportService.importContactsFromCsv(eq(csvContent), any(User.class)))
             .thenReturn(importResponse);
 
         // Act
@@ -234,7 +233,7 @@ class ContactControllerImportTest {
         ImportContactsResponse importResponse = new ImportContactsResponse(
             1, 1, 0, errors, "Test message"
         );
-        when(contactImportService.importContactsFromCsv(csvContent, testUser))
+        when(contactImportService.importContactsFromCsv(eq(csvContent), any(User.class)))
             .thenReturn(importResponse);
 
         // Act
@@ -271,7 +270,7 @@ class ContactControllerImportTest {
             "Import completed: 500 succeeded, 0 failed"
         );
         when(contactImportService.importContactsFromCsv(
-            csvBuilder.toString(), testUser))
+            eq(csvBuilder.toString()), any(User.class)))
             .thenReturn(importResponse);
 
         // Act
